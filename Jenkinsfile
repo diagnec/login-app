@@ -2,10 +2,9 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_USER = "cheikh9708"
-        FRONTEND_IMAGE = "${DOCKER_USER}/frontend:latest"
-        BACKEND_IMAGE  = "${DOCKER_USER}/backend:latest"
-        K8S_NAMESPACE = "default"
+        DOCKERHUB_USER = "cheikh9708"
+        FRONTEND_IMAGE = "cheikh9708/frontend:latest"
+        BACKEND_IMAGE  = "cheikh9708/backend:latest"
     }
 
     stages {
@@ -19,33 +18,29 @@ pipeline {
         stage('Verify Tools') {
             steps {
                 sh '''
-                docker --version
-                kubectl version --client
+                    docker --version
+                    kubectl version --client
                 '''
             }
         }
 
         stage('Build Frontend Image') {
             steps {
-                sh """
-                docker build -t ${FRONTEND_IMAGE} ./frontend
-                """
+                sh "docker build -t $FRONTEND_IMAGE ./frontend"
             }
         }
 
         stage('Build Backend Image') {
             steps {
-                sh """
-                docker build -t ${BACKEND_IMAGE} ./backend
-                """
+                sh "docker build -t $BACKEND_IMAGE ./backend"
             }
         }
 
-        stage('Docker Hub Login') {
+        stage('Docker Login') {
             steps {
-                withCredentials([string(credentialsId: 'docker-password', variable: 'DOCKER_PASSWORD')]) {
+                withCredentials([string(credentialsId: 'docker-password', variable: 'DOCKER_PASS')]) {
                     sh '''
-                    echo $DOCKER_PASSWORD | docker login -u cheikh9708 --password-stdin
+                        echo "$DOCKER_PASS" | docker login -u $DOCKERHUB_USER --password-stdin
                     '''
                 }
             }
@@ -54,56 +49,16 @@ pipeline {
         stage('Push Images') {
             steps {
                 sh """
-                docker push ${FRONTEND_IMAGE}
-                docker push ${BACKEND_IMAGE}
+                    docker push $FRONTEND_IMAGE
+                    docker push $BACKEND_IMAGE
                 """
-            }
-        }
-
-        stage('Setup Kubernetes Config') {
-            steps {
-                withCredentials([string(credentialsId: 'kube-token', variable: 'KUBE_TOKEN')]) {
-                    sh '''
-                    set -e
-
-                    mkdir -p $HOME/.kube
-
-                    cat > $HOME/.kube/config <<EOF
-apiVersion: v1
-kind: Config
-clusters:
-- name: minikube
-  cluster:
-    server: https://$(minikube ip):8443
-    insecure-skip-tls-verify: true
-
-contexts:
-- name: jenkins
-  context:
-    cluster: minikube
-    user: jenkins
-
-current-context: jenkins
-
-users:
-- name: jenkins
-  user:
-    token: $KUBE_TOKEN
-EOF
-
-                    kubectl get nodes
-                    '''
-                }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                kubectl apply -f k8s/
-
-                kubectl rollout status deployment/frontend-deployment || true
-                kubectl rollout status deployment/backend-deployment || true
+                    kubectl apply -f k8s/
                 '''
             }
         }
@@ -111,9 +66,8 @@ EOF
 
     post {
         success {
-            echo "Pipeline réussi 🚀"
+            echo "Pipeline réussi ✅"
         }
-
         failure {
             echo "Pipeline échoué ❌"
         }
