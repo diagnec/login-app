@@ -65,7 +65,7 @@ pipeline{
 
         stage('Push Backend Image') {
             steps {
-                sh 'dpcker push $BACKEND_IMAGE'
+                sh 'docker push $BACKEND_IMAGE'
             }
         }
         
