@@ -14,7 +14,8 @@ pipeline{
         stage('Clone Repository') {
 
             steps {
-                git 
+                git url: 'https://github.com/diagnec/login-app.git',
+                    branch: 'main' 
             }
         }
 
